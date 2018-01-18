@@ -1,0 +1,75 @@
+\section{Cascading Verification}
+\label{sec:Cascading_Verification}
+
+\noindent Cascading verification combines the technologies described in the previous section to enhance the abstraction level of model and property specifications, and the effectiveness of probabilistic model checking; our prototype implementation of cascading verification combines these technologies to support the probabilistic verification of UAV mission plans. This section describes the prototype by tracing verification from high-level mission specifications to probabilistic model checking with PRISM\@.
+
+\subsection{Verification with Semantic Reasoning}
+\label{sec:Verification_with_Semantic_Reasoning}
+
+\noindent With cascading verification, model builders use a DSL to encode high-level system specifications. In the context of our prototype, model builders use YAML to encode mission plans and the geographic data associated with those plans. Mission specifications encoded in YAML are transformed by the CVC into ABox assertions. During this preprocessing phase, geodesic equations use geographic coordinates (described in Section~\ref{sec:An_Example_Mission}) and threat area data from external sources to calculate supplementary geographic information. For example, if the boundary of a threat area is intersected by a flightpath, then the traverse path segment action corresponding to that flightpath is classified as a threat area action. Geodesic equations can be used to establish threat area incursions in this manner because both flightpath and threat area boundary are defined by \emph{great circles}.\footnote{A great circle is the intersection of the Earth's surface with a plane passing through the center of the Earth.}
+
+Pellet verifies the generated ABox against the TBox defined by domain experts. Inconsistencies between TBox and ABox signify an invalid mission specification; for example, an asset that does not execute at least one kinetic action would be inconsistent with respect to the definition of class \texttt{Asset} presented in Section~\ref{sec:Semantic_Modeling}. The OWL code in Listing~\ref{lst:OWL_individual_H1} specifies a valid ABox individual with identifier \texttt{H1}, which corresponds to the identifier of the Hummingbird asset specified in Mission~A.
+
+\begin{lstlisting}[caption={OWL code for the individual H1},label=lst:OWL_individual_H1]
+Individual: H1
+  Types: Hummingbird
+  Facts: hasAction TPSA1 and hasAction TPSA2
+\end{lstlisting}
+
+With ABox consistency deduced, Pellet proceeds to generate inferences by, for example, reasoning about \emph{realization}, which determines the direct types of each individual. Given realization, a threat area action that initiates or prolongs an incursion is classified by Pellet as a \emph{direct threat area action} (DTAA). This inference triggers the synthesis of PRISM code that calculates a \emph{risk acceptability factor} (RAF) for the threat area incursion comprising the inferred DTAA\@. Each RAF value quantifies the risk for a specific threat area incursion, with RAF values of zero and one indicating high- and low-risk incursions, respectively. A RAF numerator represents the duration of concurrent execution between sensor actions and DTAAs during a threat area incursion; the denominator represents the aggregate duration of DTAA executions during that incursion.
+
+RAF values resulting from the execution of synthesized PRISM code are verified against a RAF threshold value, which is specified in CEMO and integrated by the CVC into synthesized mission properties. For example, property \texttt{P=? [ F raf>0.6 ]} queries the probability that the specified RAF value exceeds 60 percent. Current threshold values are arbitrary, and should eventually be calculated from real-world data.
+
+\subsection{Classification with Prolog}
+
+\noindent Some Pellet inferences are transformed by the CVC into Prolog rules; for example, the Prolog rule \texttt{terminal} comprises knowledge inferred by Pellet (as described in Section~\ref{sec:Rule_Based_Modeling}). The Prolog code in Listing~\ref{lst:Prolog_rule_terminal_constrained_observer} formally defines rule \texttt{terminal\_constrained\_observer}, which encapsulates the atom \texttt{terminal}.
+
+\begin{lstlisting}[caption={Prolog code for rule terminal\_constrain\-ed\_observer},label=lst:Prolog_rule_terminal_constrained_observer]
+terminal_constrained_observer(X) :-
+  constrained_observer(X),
+  terminal(X).
+\end{lstlisting}
+
+SWI-Prolog classifies each kinetic action with respect to the relationships that exist between it and other kinetic actions; for example, an action that is the last kinetic action to be executed by an asset, and has as precondition at least one cross-cutting kinetic action, is classified by SWI-Prolog as a \texttt{terminal\_constrained\_observer}. The classification of a kinetic action affects the composition of the PRISM module for the asset to which that action is assigned; for example, the classification of action \texttt{TPSA2} in Mission~A as a \texttt{terminal\_constrained\_observer} affects the PRISM module corresponding to asset \texttt{H1}. Affected asset module constructs include the action label of the command associated with \texttt{TPSA2} (recall that each asset module command is associated with a specific kinetic action) and, potentially, the action label of the last module command (see inferred arguments in Section~\ref{sec:Behavioral_Modeling}).
+
+Kinetic action classifications also generate mission properties; for example, as the last kinetic action to be executed by an asset, the successful execution of a \texttt{terminal\_con\-strained\_observer} is a desired mission property because it guarantees the successful execution of all preceding actions.
+
+\subsection{Synthesized Models and Properties}
+\label{sec:Synthesized_Models_and_Properties}
+
+\noindent The CVC uses explicit and inferred domain knowledge to synthesize DTMC and PCTL artifacts from predefined templates; for example, the asset module template presented in Section~\ref{sec:Behavioral_Modeling} underpins the synthesis of one module per each asset in Mission~A\@. The PRISM code in Listing~\ref{lst:PRISM_asset_module_code} specifies a synthesized asset module corresponding to asset \texttt{H2}, where the commands in lines~3 and~4 represent, respectively, the execution of actions \texttt{TPSA3} and \texttt{TPSA4} assigned to \texttt{H2}.
+
+\begin{lstlisting}[caption={PRISM asset module code},label=lst:PRISM_asset_module_code]
+module Hummingbird2
+  e2 : [0..120] init 120;
+  [asst1] e2>0 & d3>0 -> (e2'=e2-1);
+  [asst1] e2>0 & d4>0 -> (e2'=e2-1);
+  [asst1] e2=0 | d4=0 -> true;
+endmodule
+\end{lstlisting}
+
+Let us assume a threat area action classification for action \texttt{TPSA4} (via the preprocessing phase described in Section~\ref{sec:Verification_with_Semantic_Reasoning}). Given this assumption, Pellet infers action \texttt{TPSA4} to be a DTAA (since \texttt{TPSA4} initiates the incursion). Asset \texttt{H2} is consequently inferred a valid asset (since \texttt{H2} executes at least one sensor action, namely \texttt{PSA5}, during the incursion). As a consequence of these inferences, the CVC synthesizes an asset survivability module to calculate the probability of survival for \texttt{H2} (as described in Section~\ref{sec:Behavioral_Modeling}). The PRISM code in Listing~\ref{lst:PRISM_asset_survivability_code} specifies the synthesized survivability module corresponding to asset \texttt{H2}, where variable \texttt{a2d} (lines~4--7) represents the asset's destruction.
+
+\begin{lstlisting}[caption={PRISM asset survivability code},label=lst:PRISM_asset_survivability_code]
+formula actn4_tai = d4>0 & d4<=60;
+
+module Hummingbird2_Survivability
+  a2d : bool init false;
+  [asst1] !a2d & (*\hspace{1.8mm}*)actn4_tai
+      -> 0.99:(a2d'=false) + 0.01:(a2d'=true);
+  [asst1] (*\hspace{1.8mm}*)a2d | !actn4_tai
+      -> true;
+endmodule
+\end{lstlisting}
+
+At the conclusion of the synthesis process, the DTMC artifact that models Mission~A is verified against the synthesized PCTL property specified in Listing~\ref{lst:PRISM_mission_property}. This property comprises variables \texttt{d2} and \texttt{d4}, which represent the durations of \texttt{TPSA2} and \texttt{TPSA4}, respectively; variable \texttt{a2d}, described above; and variable \texttt{raf2}, which represents the RAF value for the threat area incursion committed by asset~\texttt{H2}. The property need not comprise variables to represent the durations of \texttt{TPSA1} and \texttt{TPSA3} because these actions precede \texttt{TPSA2} and \texttt{TPSA4}, respectively. In other words, the successful execution of \texttt{TPSA1} is implied by the successful execution of \texttt{TPSA2} (this implication is denoted by the classification of \texttt{TPSA2} as a \texttt{terminal\_constrained\_observer}), etc.
+
+\begin{lstlisting}[caption={PRISM mission property code},label=lst:PRISM_mission_property]
+P=? [ F d2=0 & d4=0 & !a2d & raf2>0.6(*\hspace{1.8mm}*)]
+\end{lstlisting}
+
+Given the property in Listing~\ref{lst:PRISM_mission_property}, the probability of success for Mission~A is calculated by PRISM to be approximately 0.299. In particular, the verification of Mission~A assigns variables \texttt{d2} and \texttt{d4} with values of zero; variable \texttt{!a2d} is assigned a probability of approximately 0.299; and variable \texttt{raf2} is assigned a value of approximately 0.833.
+
+\subsection{Implementation}
+
+\noindent We have implemented several of the components that constitute our prototype. The ontology described in Section~\ref{sec:Semantic_Modeling} and Section~\ref{sec:Rule_Based_Modeling} was implemented in OWL+SWRL\@. The Prolog rule-base described in Section~\ref{sec:Rule_Based_Modeling} was implemented in SWI-Prolog. The DTMC and PCTL templates presented in Section~\ref{sec:Behavioral_Modeling} were implemented in the programming language Ruby. And the DSL described in Section~\ref{sec:Method_Overview} was implemented in YAML, which is particularly compatible with Ruby. While integration, testing and extension of implemented components is currently ongoing, completed work was sufficient to support an evaluation, which is presented in the following section.

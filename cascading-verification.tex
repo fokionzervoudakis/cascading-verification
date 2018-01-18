@@ -1,0 +1,83 @@
+\documentclass{sig-alternate}
+
+\usepackage{fix-cm}
+\usepackage{flushend}
+\usepackage{listings}
+\usepackage{url}
+\usepackage[usenames,dvipsnames]{xcolor}
+
+\clubpenalty=10000
+\widowpenalty=10000
+\displaywidowpenalty=10000
+
+\vbadness=10000
+
+\newcommand{\myfootnotemark}[1]{{\fontsize{13}{0}\selectfont$^{#1}$}}
+\newcommand{\myfootnotetext}[1]{{\fontsize{12}{0}\selectfont$^{#1}$}}
+
+\lstset{
+	basicstyle=\ttfamily\fontsize{7.2}{8.64}\selectfont,
+	captionpos=b,
+	escapeinside={(*}{*)},
+	frame=single,
+	numbers=right,
+	numbersep=-8pt,
+	numberstyle=\scriptsize\color{gray},
+	rulecolor=\color{gray!20}
+}
+
+\begin{document}
+
+\conferenceinfo{ESEC/FSE}{'13, August 18--26, 2013, Saint Petersburg, Russia}
+\CopyrightYear{13}
+\crdata{978-1-4503-2237-9/13/08}
+
+\title{Cascading Verification: An Integrated Method for Domain-Specific Model Checking}
+
+\numberofauthors{4}
+
+\author{
+	\alignauthor
+		Fokion Zervoudakis\myfootnotemark{*}
+	\alignauthor
+		David S.~Rosenblum\myfootnotemark{\dag}
+	\and
+	\alignauthor
+		Sebastian Elbaum\myfootnotemark{\ddag}
+	\alignauthor
+		Anthony Finkelstein\myfootnotemark{*}
+	\and
+	\alignauthor
+		\affaddr{\myfootnotetext{*}Department of Computer Science}\\
+		\affaddr{University College London}\\
+		\affaddr{London, UK}\\
+		\email{\{f.zervoudakis, a.finkelstein\}\\@cs.ucl.ac.uk}
+	\alignauthor
+		\affaddr{\myfootnotetext{\dag}School of Computing}\\
+		\affaddr{National University of Singapore}\\
+		\affaddr{Republic of Singapore}\\
+		\email{david@comp.nus.edu.sg}
+	\alignauthor
+		\affaddr{\myfootnotetext{\ddag}Department of Computer Science \& Engineering}\\
+		\affaddr{University of Nebraska--Lincoln}\\
+		\affaddr{Lincoln NE, USA}\\
+		\email{elbaum@cse.unl.edu}
+}
+
+\maketitle
+
+\input{tex/abstract}
+\input{tex/introduction}
+\input{tex/background}
+\input{tex/method-overview}
+\input{tex/domain-modeling}
+\input{tex/cascading-verification}
+\input{tex/evaluation}
+\input{tex/related-work}
+\input{tex/conclusions-and-future-work}
+\input{tex/acknowledgements}
+
+\bibliographystyle{ieeetr}
+\bibliography{bibliography}
+
+\end{document}
