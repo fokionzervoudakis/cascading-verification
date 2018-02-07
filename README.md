@@ -7,6 +7,7 @@ To clone the repository and compile with *LaTeX*:
 ```
 git clone git@github.com:fokionzervoudakis/cascading-verification.git
 cd cascading-verification/
+chmod +x compile.sh
 ./compile.sh
 ```
 
