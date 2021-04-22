@@ -5,7 +5,7 @@ This is the repository for the refereed conference paper *Cascading Verification
 Clone and navigate to the repository.
 
 ```
-git clone git@github.com:fokionzervoudakis/cascading-verification.git
+git clone git@github.com:fokionzd/cascading-verification.git
 cd cascading-verification/
 ```
 
